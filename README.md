@@ -41,33 +41,15 @@ Without ALT, each Solana TX can fit ~2 multi-wallet buys before hitting the 1232
 
 The ALT itself has to be **created and warmed** (extended with the wallet pubkeys) at least one slot before the launch bundle, because lookups only resolve against ALT versions that the validator has already seen.
 
-## Strict-atomic policy
+## Atomicity as a product contract
 
-In production you don't want a "best effort" bundler. If Jito accepts but fails to include, you've spent gas + tip and got nothing. The correct policy is:
+In production you don't want a "best effort" bundler. If Jito accepts but fails to include, you've spent gas + tip and got nothing. The right principle: if atomicity was promised, atomicity must be delivered or the operation must refuse. A silent fallback to sequential (non-atomic) submission is a hidden product change — worse than failing loudly.
 
-```
-1. Submit bundle to N Jito endpoints in parallel (race)
-2. If ANY endpoint returns accepted within timeout → poll for inclusion
-3. If inclusion confirmed within K slots → success
-4. If no endpoint accepts OR no inclusion in K slots → REFUSE the launch entirely
-5. Never silently fall back to sequential (non-atomic) submission
-```
+How you enforce this is up to you; the key invariants are (a) verify inclusion before claiming success, and (b) never quietly downgrade the execution mode.
 
-A silent fallback to sequential is a product-contract violation — the user paid for atomicity, anything less is a hidden product change.
+## Multi-region routing
 
-## Multi-region endpoint race
-
-Jito has block engines in different regions. Race them in parallel:
-
-```
-amsterdam.mainnet.block-engine.jito.wtf
-frankfurt.mainnet.block-engine.jito.wtf
-ny.mainnet.block-engine.jito.wtf
-tokyo.mainnet.block-engine.jito.wtf
-mainnet.block-engine.jito.wtf  (default routing)
-```
-
-First one to return `accepted` wins. This typically saves 100–400ms vs serial fallback.
+Jito operates regional block engines. Routing through the geographically closest one shaves meaningful latency. Whether you race them in parallel, fail over sequentially, or pin to one depends on your latency budget and your tolerance for the trade-off between coverage and request multiplication.
 
 ---
 
