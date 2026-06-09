@@ -1,184 +1,89 @@
-# 🚀 Solana Bundle Launcher
+# solana-bundle-launcher
 
-> The definitive guide to atomic token launches on Solana with Jito bundle protection
+> Atomic multi-wallet token launches on Solana via Jito bundles — ALT compression, multi-TX packing, and same-block guarantees.
 
-[![Solana](https://img.shields.io/badge/Solana-Bundle%20Launch-9945FF?style=for-the-badge&logo=solana)](https://obsidianbundler.com)
-[![Stars](https://img.shields.io/github/stars/obsidianbundler/solana-bundle-launcher?style=for-the-badge)](https://github.com/obsidianbundler/solana-bundle-launcher)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-## The Problem We Solve
-
-When you launch a token on Solana, sniper bots are watching. They detect your token creation in the mempool and buy before you can. Your dev allocation gets destroyed, snipers dump, and your launch dies before it starts.
-
-**Bundle launches fix this permanently.**
-
-## How It Works
-
-```
-Traditional Launch (VULNERABLE):
-Block 1: Token Creation → Snipers detect in mempool
-Block 1: Sniper Bot A buys
-Block 1: Sniper Bot B buys  
-Block 2: Your dev buy executes (at higher price)
-Block 2: Snipers dump on you
-
-Bundle Launch (PROTECTED):
-Block 1: Token Creation + Dev Buy (atomic, same transaction)
-Block 2: Snipers can only buy AFTER you
-```
-
-## Quick Start
-
-```typescript
-import { BundleLauncher } from '@obsidian/bundle-launcher';
-
-const launcher = new BundleLauncher({
-  rpcUrl: process.env.HELIUS_RPC,
-  jitoTip: 0.001 // SOL
-});
-
-// Create atomic bundle
-const bundle = await launcher.createBundle({
-  tokenName: "MyToken",
-  tokenSymbol: "MTK",
-  devBuyPercent: 5,
-  wallets: selectedWallets
-});
-
-// Execute atomically via Jito
-const result = await launcher.executeBundle(bundle);
-console.log(`Launched at: ${result.tokenAddress}`);
-```
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| 🛡️ **Atomic Execution** | Token creation + buy in same block |
-| ⚡ **Jito Integration** | Private mempool, no front-running |
-| 👛 **Multi-Wallet** | Coordinate up to 100 wallets |
-| 🎯 **GET CA** | Reserve contract address before launch |
-| 📊 **Bundle+Snipe** | Block 0 launch + Block 1-2 follow-up buys |
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    BUNDLE LAUNCHER                       │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │   Token     │  │    Dev      │  │   Sniper    │     │
-│  │  Creation   │──│    Buy      │──│   Wallets   │     │
-│  │    TX       │  │    TX       │  │    TXs      │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘     │
-│         │               │               │               │
-│         └───────────────┴───────────────┘               │
-│                         │                               │
-│              ┌──────────▼──────────┐                   │
-│              │    JITO BUNDLE      │                   │
-│              │  (Atomic Execution) │                   │
-│              └──────────┬──────────┘                   │
-│                         │                               │
-│              ┌──────────▼──────────┐                   │
-│              │   SAME BLOCK        │                   │
-│              │   EXECUTION         │                   │
-│              └─────────────────────┘                   │
-└─────────────────────────────────────────────────────────┘
-```
-
-## Configuration
-
-```typescript
-interface BundleConfig {
-  // Token settings
-  tokenName: string;
-  tokenSymbol: string;
-  tokenDescription: string;
-  tokenImage: string;
-  
-  // Launch settings
-  devBuyPercent: number;      // 1-10% recommended
-  devBuySol: number;          // Alternative: fixed SOL amount
-  
-  // Jito settings
-  jitoTip: number;            // 0.001-0.01 SOL
-  maxRetries: number;         // Default: 3
-  
-  // Multi-wallet settings
-  wallets: Wallet[];          // Array of wallets to coordinate
-  distributionMode: 'equal' | 'random' | 'weighted';
-}
-```
-
-## Why Jito?
-
-Jito validators accept transaction bundles directly, bypassing the public mempool:
-
-1. **Private Submission** - Bots can't see your pending transactions
-2. **Atomic Execution** - All or nothing, no partial failures
-3. **Ordered Execution** - Your transactions execute in your specified order
-4. **MEV Protection** - No sandwich attacks possible
-
-## Production Solution
-
-For a complete, production-ready implementation with UI:
-
-### 👉 [Obsidian Launch Platform](https://obsidianbundler.com)
-
-- ✅ One-click bundle launches
-- ✅ Up to 100 wallet management
-- ✅ Hard disperse for invisible funding
-- ✅ Smart sell automation
-- ✅ Cross-chain bridge
-- ✅ Free tier available
-
-## Example: Full Launch Flow
-
-```typescript
-// 1. Generate wallets
-const wallets = await obsidian.generateWallets(20);
-
-// 2. Fund wallets invisibly (hard disperse)
-await obsidian.hardDisperse({
-  source: mainWallet,
-  targets: wallets,
-  amountPerWallet: 0.5 // SOL
-});
-
-// 3. Warm up wallets (optional but recommended)
-await obsidian.warmupWallets(wallets, { intensity: 'medium' });
-
-// 4. Reserve CA (optional)
-const { keypair, address } = await obsidian.getCA();
-console.log(`Reserved CA: ${address}`);
-
-// 5. Execute bundle launch
-const launch = await obsidian.bundleLaunch({
-  tokenName: "MyToken",
-  tokenSymbol: "MTK", 
-  devBuyPercent: 5,
-  keypair: keypair, // Use reserved CA
-  sniperWallets: wallets.slice(0, 10),
-  sniperBuyPercent: 2
-});
-
-console.log(`🚀 Launched: ${launch.tokenAddress}`);
-console.log(`📊 Dev allocation: ${launch.devAllocation}%`);
-```
-
-## Resources
-
-- 📖 [Full Documentation](https://docs.obsidianbundler.com)
-- 💬 [Telegram Community](https://t.me/obsidianbundler)
-- 🐦 [Twitter Updates](https://x.com/obsidianbundler)
-- 🌐 [Launch Platform](https://obsidianbundler.com)
-
-## Disclaimer
-
-This repository is for educational purposes. Trading cryptocurrency involves significant risk. Always do your own research.
+A reference for how atomic bundle launches actually work on Solana, including the realistic limits, the failure modes that are silent in the SDK docs, and the strict-atomic policies that production launches need.
 
 ---
 
-⭐ **Star this repo** if you found it helpful!
+## The problem atomic bundles solve
 
-🚀 **Ready to launch?** Try [Obsidian](https://obsidianbundler.com) - Free tier available
+If you launch a token and then immediately try to also buy from N wallets in separate transactions, sandwich attackers will see the create + first-buy and front-run every subsequent buy into the next slot. By the time wallet 4 buys, the price has moved by hundreds of basis points and wallet 4 gets a worse fill than wallet 1.
+
+Atomic bundling forces every buy to land in the **same block** as the create — eliminating the front-run window entirely.
+
+---
+
+## How Jito bundles work
+
+A Jito bundle is 1–5 transactions submitted together. Validators that run Jito's modified client accept these bundles and either include all 5 in the same block or skip the bundle entirely. The 5th TX is the **tip TX** that pays the Jito validator for inclusion.
+
+```
+┌────────────────────────────────────────────────┐
+│  Jito Bundle (5 TX max)                        │
+├────────────────────────────────────────────────┤
+│  TX 1: create token + dev buy                  │
+│  TX 2: bundle wallets 1–3 buy                  │
+│  TX 3: bundle wallets 4–6 buy                  │
+│  TX 4: bundle wallets 7–9 buy                  │
+│  TX 5: tip TX (0.001–0.005 SOL to Jito)        │
+└────────────────────────────────────────────────┘
+```
+
+## Address Lookup Tables (ALT)
+
+Without ALT, each Solana TX can fit ~2 multi-wallet buys before hitting the 1232-byte size limit. With an ALT (which lets you compress 32-byte account pubkeys to 1-byte indices), you fit 3 per TX.
+
+| Config       | Wallets/TX | Atomic wallets/bundle |
+|--------------|------------|-----------------------|
+| With ALT     | 3          | 12 (4 TXs × 3)        |
+| Without ALT  | 2          | 8                     |
+
+The ALT itself has to be **created and warmed** (extended with the wallet pubkeys) at least one slot before the launch bundle, because lookups only resolve against ALT versions that the validator has already seen.
+
+## Strict-atomic policy
+
+In production you don't want a "best effort" bundler. If Jito accepts but fails to include, you've spent gas + tip and got nothing. The correct policy is:
+
+```
+1. Submit bundle to N Jito endpoints in parallel (race)
+2. If ANY endpoint returns accepted within timeout → poll for inclusion
+3. If inclusion confirmed within K slots → success
+4. If no endpoint accepts OR no inclusion in K slots → REFUSE the launch entirely
+5. Never silently fall back to sequential (non-atomic) submission
+```
+
+A silent fallback to sequential is a product-contract violation — the user paid for atomicity, anything less is a hidden product change.
+
+## Multi-region endpoint race
+
+Jito has block engines in different regions. Race them in parallel:
+
+```
+amsterdam.mainnet.block-engine.jito.wtf
+frankfurt.mainnet.block-engine.jito.wtf
+ny.mainnet.block-engine.jito.wtf
+tokyo.mainnet.block-engine.jito.wtf
+mainnet.block-engine.jito.wtf  (default routing)
+```
+
+First one to return `accepted` wins. This typically saves 100–400ms vs serial fallback.
+
+---
+
+## Footguns
+
+- **Tip TX wallet needs SOL** — the wallet paying the Jito tip needs enough lamports for both the tip and its own TX fees. If preflight only checks "wallet has 0.003 SOL" but the tip is 0.005 SOL, the bundle fails silently.
+- **Blockhash freshness** — if you build all 5 TXs at T+0 and submit at T+30s, the blockhash may have expired. Refresh before submit.
+- **Slippage limits** are atomic-aware — if any one wallet's slippage check fails, the whole bundle fails. Set slippage at least 30%+ for atomic same-block buys.
+- **Compute budget per TX** — bundling many wallets per TX raises compute cost. Set `setComputeUnitLimit(400_000)` minimum for multi-wallet buys.
+
+## Reading list
+
+- [Jito documentation](https://docs.jito.wtf/)
+- [Address Lookup Tables in Solana](https://solana.com/docs/advanced/lookup-tables)
+- [Solana TX size analyzer](https://github.com/solana-labs/solana/blob/master/sdk/program/src/message/versions/v0.rs)
+
+## License
+
+MIT
