@@ -2,7 +2,7 @@
 
 > Atomic multi-wallet token launches on Solana via Jito bundles — ALT compression, multi-TX packing, and same-block guarantees.
 
-A reference for how atomic bundle launches actually work on Solana, including the realistic limits, the failure modes that are silent in the SDK docs, and the strict-atomic policies that production launches need.
+A reference for how atomic bundle launches actually work on Solana — the realistic limits, the failure modes that are silent in the SDK docs, and the contract a production-grade launcher needs to honor.
 
 ---
 
